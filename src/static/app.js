@@ -304,16 +304,21 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
+  function createActivitySlug(activityName) {
+    return activityName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+
   // Create social share links for an activity
   function createShareLinks(activityName, details, formattedSchedule) {
-    const activityUrl = window.location.href;
+    const activitySlug = createActivitySlug(activityName);
+    const activityUrl = `${window.location.origin}${window.location.pathname}#activity-${activitySlug}`;
     const shareText = `Check out "${activityName}" at Mergington High School! ${details.description} Schedule: ${formattedSchedule}`;
 
     return {
       whatsapp: `https://wa.me/?text=${encodeURIComponent(
         `${shareText} ${activityUrl}`
       )}`,
-      x: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+      x: `https://x.com/intent/tweet?text=${encodeURIComponent(
         shareText
       )}&url=${encodeURIComponent(activityUrl)}`,
       email: `mailto:?subject=${encodeURIComponent(
@@ -488,12 +493,27 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.entries(filteredActivities).forEach(([name, details]) => {
       renderActivityCard(name, details);
     });
+
+    scrollToActivityFromHash();
+  }
+
+  function scrollToActivityFromHash() {
+    const hash = window.location.hash;
+    if (!hash.startsWith("#activity-")) {
+      return;
+    }
+
+    const targetActivity = document.querySelector(hash);
+    if (targetActivity) {
+      targetActivity.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
   }
 
   // Function to render a single activity card
   function renderActivityCard(name, details) {
     const activityCard = document.createElement("div");
     activityCard.className = "activity-card";
+    activityCard.id = `activity-${createActivitySlug(name)}`;
 
     // Calculate spots and capacity
     const totalSpots = details.max_participants;
