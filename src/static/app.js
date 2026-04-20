@@ -24,6 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const loginForm = document.getElementById("login-form");
   const closeLoginModal = document.querySelector(".close-login-modal");
   const loginMessage = document.getElementById("login-message");
+  const schoolName =
+    document.querySelector("header h1")?.textContent?.trim() ||
+    "Our School";
 
   // Activity categories with corresponding colors
   const activityTypes = {
@@ -304,6 +307,57 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
+  // Convert text to safe HTML to prevent accidental markup/script injection in dynamic templates
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function sanitizeShareText(value) {
+    return String(value)
+      .replace(/[\r\n\t]+/g, " ")
+      .replace(/[<>]/g, "")
+      .trim();
+  }
+
+  // Create a collision-proof id by encoding the full activity name bytes as hex
+  function createActivityId(activityName) {
+    const encodedBytes = new TextEncoder().encode(activityName.trim());
+    const activityHex = Array.from(encodedBytes)
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+    return `activity-${activityHex || "default"}`;
+  }
+
+  // Build pre-filled share links so users can quickly share an activity on WhatsApp, X, or email
+  function createShareLinks(activityName, details, formattedSchedule) {
+    const activityId = createActivityId(activityName);
+    const activityUrl = `${window.location.origin}${window.location.pathname}#${encodeURIComponent(
+      activityId
+    )}`;
+    const safeActivityName = sanitizeShareText(activityName);
+    const safeSchoolName = sanitizeShareText(schoolName);
+    const safeDescription = sanitizeShareText(details.description);
+    const safeSchedule = sanitizeShareText(formattedSchedule);
+    const shareText = `Check out "${safeActivityName}" at ${safeSchoolName}! ${safeDescription} Schedule: ${safeSchedule}`;
+
+    return {
+      whatsapp: `https://wa.me/?text=${encodeURIComponent(
+        `${shareText} ${activityUrl}`
+      )}`,
+      x: `https://x.com/intent/tweet?text=${encodeURIComponent(
+        shareText
+      )}&url=${encodeURIComponent(activityUrl)}`,
+      email: `mailto:?subject=${encodeURIComponent(
+        `Activity to join: ${activityName}`
+      )}&body=${encodeURIComponent(`${shareText}\n\n${activityUrl}`)}`,
+    };
+  }
+
   // Function to determine activity type (this would ideally come from backend)
   function getActivityType(activityName, description) {
     const name = activityName.toLowerCase();
@@ -470,12 +524,33 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.entries(filteredActivities).forEach(([name, details]) => {
       renderActivityCard(name, details);
     });
+
+    scrollToActivityFromHash();
+  }
+
+  // If a shared URL includes an activity id, scroll to that activity card after cards are rendered
+  function scrollToActivityFromHash() {
+    const hash = window.location.hash;
+    if (!hash) {
+      return;
+    }
+
+    const targetId = decodeURIComponent(hash.slice(1));
+    if (!/^activity-(?:[0-9a-f]+|default)$/i.test(targetId)) {
+      return;
+    }
+
+    const targetActivity = document.getElementById(targetId);
+    if (targetActivity) {
+      targetActivity.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
   }
 
   // Function to render a single activity card
   function renderActivityCard(name, details) {
     const activityCard = document.createElement("div");
     activityCard.className = "activity-card";
+    activityCard.id = createActivityId(name);
 
     // Calculate spots and capacity
     const totalSpots = details.max_participants;
@@ -498,6 +573,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Format the schedule using the new helper function
     const formattedSchedule = formatSchedule(details);
+    const shareLinks = createShareLinks(name, details, formattedSchedule);
 
     // Create activity tag
     const tagHtml = `
@@ -505,6 +581,13 @@ document.addEventListener("DOMContentLoaded", () => {
         ${typeInfo.label}
       </span>
     `;
+
+    const safeActivityName = escapeHtml(name);
+    const safeShareLinks = {
+      whatsapp: escapeHtml(shareLinks.whatsapp),
+      x: escapeHtml(shareLinks.x),
+      email: escapeHtml(shareLinks.email),
+    };
 
     // Create capacity indicator
     const capacityIndicator = `
@@ -527,6 +610,34 @@ document.addEventListener("DOMContentLoaded", () => {
         <strong>Schedule:</strong> ${formattedSchedule}
         <span class="tooltip-text">Regular meetings at this time throughout the semester</span>
       </p>
+      <div class="share-buttons">
+        <span class="share-label">Share:</span>
+        <a
+          class="share-button share-whatsapp"
+          href="${safeShareLinks.whatsapp}"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Share ${safeActivityName} on WhatsApp"
+        >
+          WhatsApp
+        </a>
+        <a
+          class="share-button share-x"
+          href="${safeShareLinks.x}"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Share ${safeActivityName} on X"
+        >
+          X
+        </a>
+        <a
+          class="share-button share-email"
+          href="${safeShareLinks.email}"
+          aria-label="Share ${safeActivityName} by email"
+        >
+          Email
+        </a>
+      </div>
       ${capacityIndicator}
       <div class="participants-list">
         <h5>Current Participants:</h5>
