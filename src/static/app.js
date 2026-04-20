@@ -304,11 +304,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
+  // Turn an activity name into a safe URL id (for example: "Science Club" -> "science-club")
   function createActivitySlug(activityName) {
     return activityName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   }
 
-  // Create social share links for an activity
+  // Build pre-filled share links so users can quickly share an activity on WhatsApp, X, or email
   function createShareLinks(activityName, details, formattedSchedule) {
     const activitySlug = createActivitySlug(activityName);
     const activityUrl = `${window.location.origin}${window.location.pathname}#activity-${activitySlug}`;
@@ -497,6 +498,7 @@ document.addEventListener("DOMContentLoaded", () => {
     scrollToActivityFromHash();
   }
 
+  // If a shared URL includes an activity id, scroll to that activity card after cards are rendered
   function scrollToActivityFromHash() {
     const hash = window.location.hash;
     if (!hash.startsWith("#activity-")) {
