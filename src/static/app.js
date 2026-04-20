@@ -304,15 +304,29 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
-  // Turn an activity name into a safe URL id (for example: "Science Club" -> "science-club")
-  function createActivitySlug(activityName) {
-    return activityName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  // Create a stable, URL-safe id for each activity card (supports accented letters and avoids duplicates)
+  function createActivityId(activityName) {
+    const baseSlug =
+      activityName
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9\u00c0-\u024f]+/gi, "-")
+        .replace(/^-|-$/g, "") || "activity";
+
+    const uniqueHash = Array.from(activityName).reduce(
+      (hash, character) => (hash * 31 + character.charCodeAt(0)) >>> 0,
+      0
+    );
+
+    return `activity-${baseSlug}-${uniqueHash.toString(36)}`;
   }
 
   // Build pre-filled share links so users can quickly share an activity on WhatsApp, X, or email
   function createShareLinks(activityName, details, formattedSchedule) {
-    const activitySlug = createActivitySlug(activityName);
-    const activityUrl = `${window.location.origin}${window.location.pathname}#activity-${activitySlug}`;
+    const activityId = createActivityId(activityName);
+    const activityUrl = `${window.location.origin}${window.location.pathname}#${encodeURIComponent(
+      activityId
+    )}`;
     const shareText = `Check out "${activityName}" at Mergington High School! ${details.description} Schedule: ${formattedSchedule}`;
 
     return {
@@ -505,7 +519,8 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const targetActivity = document.querySelector(hash);
+    const targetId = decodeURIComponent(hash.slice(1));
+    const targetActivity = document.getElementById(targetId);
     if (targetActivity) {
       targetActivity.scrollIntoView({ behavior: "smooth", block: "center" });
     }
@@ -515,7 +530,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderActivityCard(name, details) {
     const activityCard = document.createElement("div");
     activityCard.className = "activity-card";
-    activityCard.id = `activity-${createActivitySlug(name)}`;
+    activityCard.id = createActivityId(name);
 
     // Calculate spots and capacity
     const totalSpots = details.max_participants;
