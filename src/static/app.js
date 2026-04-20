@@ -304,6 +304,24 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
+  // Create social share links for an activity
+  function createShareLinks(activityName, details, formattedSchedule) {
+    const activityUrl = window.location.href;
+    const shareText = `Check out "${activityName}" at Mergington High School! ${details.description} Schedule: ${formattedSchedule}`;
+
+    return {
+      whatsapp: `https://wa.me/?text=${encodeURIComponent(
+        `${shareText} ${activityUrl}`
+      )}`,
+      x: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+        shareText
+      )}&url=${encodeURIComponent(activityUrl)}`,
+      email: `mailto:?subject=${encodeURIComponent(
+        `Activity to join: ${activityName}`
+      )}&body=${encodeURIComponent(`${shareText}\n\n${activityUrl}`)}`,
+    };
+  }
+
   // Function to determine activity type (this would ideally come from backend)
   function getActivityType(activityName, description) {
     const name = activityName.toLowerCase();
@@ -498,6 +516,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Format the schedule using the new helper function
     const formattedSchedule = formatSchedule(details);
+    const shareLinks = createShareLinks(name, details, formattedSchedule);
 
     // Create activity tag
     const tagHtml = `
@@ -527,6 +546,34 @@ document.addEventListener("DOMContentLoaded", () => {
         <strong>Schedule:</strong> ${formattedSchedule}
         <span class="tooltip-text">Regular meetings at this time throughout the semester</span>
       </p>
+      <div class="share-buttons">
+        <span class="share-label">Share:</span>
+        <a
+          class="share-button share-whatsapp"
+          href="${shareLinks.whatsapp}"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Share ${name} on WhatsApp"
+        >
+          WhatsApp
+        </a>
+        <a
+          class="share-button share-x"
+          href="${shareLinks.x}"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Share ${name} on X"
+        >
+          X
+        </a>
+        <a
+          class="share-button share-email"
+          href="${shareLinks.email}"
+          aria-label="Share ${name} by email"
+        >
+          Email
+        </a>
+      </div>
       ${capacityIndicator}
       <div class="participants-list">
         <h5>Current Participants:</h5>
