@@ -24,6 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const loginForm = document.getElementById("login-form");
   const closeLoginModal = document.querySelector(".close-login-modal");
   const loginMessage = document.getElementById("login-message");
+  const schoolName =
+    document.querySelector("header h1")?.textContent?.trim() ||
+    "Mergington High School";
 
   // Activity categories with corresponding colors
   const activityTypes = {
@@ -304,21 +307,23 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
-  // Create a stable, URL-safe id for each activity card (supports accented letters and avoids duplicates)
+  // Convert text to safe HTML to prevent accidental markup/script injection in dynamic templates
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  // Create a collision-proof id by encoding the full activity name bytes as hex
   function createActivityId(activityName) {
-    const baseSlug =
-      activityName
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9\u00c0-\u024f]+/gi, "-")
-        .replace(/^-|-$/g, "") || "activity";
-
-    const uniqueHash = Array.from(activityName).reduce(
-      (hash, character) => (hash * 31 + character.charCodeAt(0)) >>> 0,
-      0
-    );
-
-    return `activity-${baseSlug}-${uniqueHash.toString(36)}`;
+    const encodedBytes = new TextEncoder().encode(activityName.trim());
+    const activityHex = Array.from(encodedBytes)
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+    return `activity-${activityHex || "default"}`;
   }
 
   // Build pre-filled share links so users can quickly share an activity on WhatsApp, X, or email
@@ -327,7 +332,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const activityUrl = `${window.location.origin}${window.location.pathname}#${encodeURIComponent(
       activityId
     )}`;
-    const shareText = `Check out "${activityName}" at Mergington High School! ${details.description} Schedule: ${formattedSchedule}`;
+    const shareText = `Check out "${activityName}" at ${schoolName}! ${details.description} Schedule: ${formattedSchedule}`;
 
     return {
       whatsapp: `https://wa.me/?text=${encodeURIComponent(
@@ -562,6 +567,13 @@ document.addEventListener("DOMContentLoaded", () => {
       </span>
     `;
 
+    const safeActivityName = escapeHtml(name);
+    const safeShareLinks = {
+      whatsapp: escapeHtml(shareLinks.whatsapp),
+      x: escapeHtml(shareLinks.x),
+      email: escapeHtml(shareLinks.email),
+    };
+
     // Create capacity indicator
     const capacityIndicator = `
       <div class="capacity-container ${capacityStatusClass}">
@@ -587,26 +599,26 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="share-label">Share:</span>
         <a
           class="share-button share-whatsapp"
-          href="${shareLinks.whatsapp}"
+          href="${safeShareLinks.whatsapp}"
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Share ${name} on WhatsApp"
+          aria-label="Share ${safeActivityName} on WhatsApp"
         >
           WhatsApp
         </a>
         <a
           class="share-button share-x"
-          href="${shareLinks.x}"
+          href="${safeShareLinks.x}"
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Share ${name} on X"
+          aria-label="Share ${safeActivityName} on X"
         >
           X
         </a>
         <a
           class="share-button share-email"
-          href="${shareLinks.email}"
-          aria-label="Share ${name} by email"
+          href="${safeShareLinks.email}"
+          aria-label="Share ${safeActivityName} by email"
         >
           Email
         </a>
