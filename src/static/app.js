@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const loginMessage = document.getElementById("login-message");
   const schoolName =
     document.querySelector("header h1")?.textContent?.trim() ||
-    "Mergington High School";
+    "Our School";
 
   // Activity categories with corresponding colors
   const activityTypes = {
@@ -317,6 +317,13 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/'/g, "&#39;");
   }
 
+  function sanitizeShareText(value) {
+    return String(value)
+      .replace(/[\r\n\t]+/g, " ")
+      .replace(/[<>]/g, "")
+      .trim();
+  }
+
   // Create a collision-proof id by encoding the full activity name bytes as hex
   function createActivityId(activityName) {
     const encodedBytes = new TextEncoder().encode(activityName.trim());
@@ -332,7 +339,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const activityUrl = `${window.location.origin}${window.location.pathname}#${encodeURIComponent(
       activityId
     )}`;
-    const shareText = `Check out "${activityName}" at ${schoolName}! ${details.description} Schedule: ${formattedSchedule}`;
+    const safeActivityName = sanitizeShareText(activityName);
+    const safeSchoolName = sanitizeShareText(schoolName);
+    const safeDescription = sanitizeShareText(details.description);
+    const safeSchedule = sanitizeShareText(formattedSchedule);
+    const shareText = `Check out "${safeActivityName}" at ${safeSchoolName}! ${safeDescription} Schedule: ${safeSchedule}`;
 
     return {
       whatsapp: `https://wa.me/?text=${encodeURIComponent(
@@ -520,11 +531,15 @@ document.addEventListener("DOMContentLoaded", () => {
   // If a shared URL includes an activity id, scroll to that activity card after cards are rendered
   function scrollToActivityFromHash() {
     const hash = window.location.hash;
-    if (!hash.startsWith("#activity-")) {
+    if (!hash) {
       return;
     }
 
     const targetId = decodeURIComponent(hash.slice(1));
+    if (!/^activity-(?:[0-9a-f]+|default)$/i.test(targetId)) {
+      return;
+    }
+
     const targetActivity = document.getElementById(targetId);
     if (targetActivity) {
       targetActivity.scrollIntoView({ behavior: "smooth", block: "center" });
